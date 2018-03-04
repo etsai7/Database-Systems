@@ -21,7 +21,7 @@ Using Python we will be implementing a database storage engine. This exercise is
 
 ## Code File
 <dl>
- <dt>Handout                    ## Top Level </dt>
+ <dt><pre>Handout                    ## Top Level </pre></dt>
  <dd><pre>
    |-- dbsys_hw1/           ## Source code directory
    |---- sql                ## SQL Warmup materials 
