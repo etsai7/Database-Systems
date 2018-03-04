@@ -20,23 +20,25 @@ The TPC-H specification can be found [here](http://www.tpc.org/tpc_documents_cur
 Using Python we will be implementing a database storage engine. This exercise is intended to get you familiar with serialization techniques in Python to help you read and write database records from a storage file. The storage engine is implemented at `dbsys_hw0/python/warmup.todo.py`
 
 ## Code File
-> Handout                    ## Top Level
->   |-- dbsys_hw1/           ## Source code directory
->   |---- sql                ## SQL Warmup materials 
->   |------ schema.todo.sql  ## Database schema definition script
->   |------ import.sql       ## Data ingestion script 
->   |------ q1.todo.sql      ## SQL exercise 1 script 
->   |------ q2.todo.sql      ## SQL exercise 2 script 
->   |------ q3.todo.sql      ## SQL exercise 3 script 
->   |------ q4.todo.sql      ## SQL exercise 4 script 
->   |------ q5.todo.sql      ## SQL exercise 5 script 
->   |
->   |---- python             ## Python warmup materials 
->   |------ warmup.py        ## Warmup implementation 
->   |
->   |-- tests/               ## Test code directory
->   |---- publictests.py     ## Test cases
->   |---- unit.py            ## Test driver
->   |---- common.py          ## Test utilities
+> <dl>
+> <dt>Handout                    ## Top Level </dt>
+> <dd>  |-- dbsys_hw1/           ## Source code directory</dd>
+> <dd>  |---- sql                ## SQL Warmup materials </dd>
+> <dd>  |------ schema.todo.sql  ## Database schema definition script</dd>
+> <dd>  |------ import.sql       ## Data ingestion script  <dd>
+> <dd>  |------ q1.todo.sql      ## SQL exercise 1 script  <dd>
+> <dd>  |------ q2.todo.sql      ## SQL exercise 2 script  <dd>
+> <dd>  |------ q3.todo.sql      ## SQL exercise 3 script  <dd>
+> <dd>  |------ q4.todo.sql      ## SQL exercise 4 script  <dd>
+> <dd>  |------ q5.todo.sql      ## SQL exercise 5 script  <dd>
+> <dd>  | <dd>
+> <dd>  |---- python             ## Python warmup materials  <dd>
+> <dd>  |------ warmup.py        ## Warmup implementation  <dd>
+> <dd>  | <dd>
+> <dd>  |-- tests/               ## Test code directory <dd>
+> <dd>  |---- publictests.py     ## Test cases <dd>
+> <dd>  |---- unit.py            ## Test driver <dd>
+> <dd>  |---- common.py          ## Test utilities <dd>
+> </dl>
 
 ### [Project 1 Source](http://damsl.cs.jhu.edu/teaching/dbsys/2017/assignments/hw0/)
