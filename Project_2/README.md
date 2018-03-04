@@ -7,10 +7,12 @@ This project designs and implement three components of a database storage engine
 
 Specifically, the project includes:
 
->* Implementing two page layout schemes to store multiple records.
->* Implementing a heap file data structure to hold all of the pages (and records) comprising a relation.
->* Implementing a buffer pool, as a cache for pages brought into memory from heap files.
->* Conducting experiments on the storage performance of your components.
+```
+* Implementing two page layout schemes to store multiple records.
+* Implementing a heap file data structure to hold all of the pages (and records) comprising a relation.
+* Implementing a buffer pool, as a cache for pages brought into memory from heap files.
+* Conducting experiments on the storage performance of your components.
+```
 
 * [Part 1](#part1): Contiguous and Slotted Pages
 * [Part 2](#part2): Heap Files
