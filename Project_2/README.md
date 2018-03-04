@@ -58,7 +58,7 @@ The buffer pool implements `theStorage.BufferPool` class. To keep things simple 
 ## Code File
 <dl>
  <dd><pre>
- dbsys-hw2/             ## Source code directory
+ Source/                 ## Source code directory
   |-- Catalog            ## Catalog utilities (i.e., schemas and types)
   |---- Identifiers.py   ## Identifier types, to distinguish tuples, pages and files.
   |---- Schema.py        ## Schema implementation
