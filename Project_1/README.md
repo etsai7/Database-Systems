@@ -17,4 +17,4 @@ The TPC-H specification can be found [here](http://www.tpc.org/tpc_documents_cur
 
 <a name="part2"></a>
 ### Python Storage Engine
-Using Python we will be implementing a database storage engine. This exercise is intended to get you familiar with serialization techniques in Python to help you read and write database records from a storage file. You will need to implement `dbsys_hw0/python/warmup.todo.py`
+Using Python we will be implementing a database storage engine. This exercise is intended to get you familiar with serialization techniques in Python to help you read and write database records from a storage file. The storage engine is implemented at `dbsys_hw0/python/warmup.todo.py`
