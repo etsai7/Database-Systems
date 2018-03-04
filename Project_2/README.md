@@ -43,8 +43,17 @@ Much like a page header resides at the beginning of a page and maintains metadat
 
 <a name="part3"></a>
 ### Part 3: Buffer Pool
-A buffer pool combines the functionality of a memory allocator and a cache for a database. The implemented buffer pool reserves a fixed amount of memory on database engine initialization. These pages should initially be considered as free pages, and are available for use in caching pages accessed from disk. As page access requests are submitted to the buffer pool, the buffer pool should check if the page already resides in memory and return it if available. Otherwise, the buffer pool should forward the access request to the appropriate heap file, supplying a free in-memory page that the heap file can fill in with data.
-To act as a cache, the buffer pool will also need to evict pages as needed from the cache when pages are accessed. We leave the choice of eviction policy to you, but you should mention your choice when reporting numbers from your experiments.
+A buffer pool combines the functionality of a memory allocator and a cache for a database. The implemented buffer pool reserves a fixed amount of memory on the database engine initialization. These pages should initially be considered as free pages, and are available for use in caching pages accessed from disk. As page access requests are submitted to the buffer pool, the buffer pool checks if the page already resides in memory and returns it if available. Otherwise, the buffer pool forwards the access request to the appropriate heap file, supplying a free in-memory page that the heap file can fill in with data.
+To act as a cache, the buffer pool will also evict pages as needed from the cache when pages are accessed. We leave the choice of eviction policy to you, but you should mention your choice when reporting numbers from your experiments.
+
+The buffer pool implements `theStorage.BufferPool` class. To keep things simple in this exercise, we do not require you to handle concurrent access to the buffer pool. The buffer pool implements the following API:
+
+* `hasPage(self, pageId)` : Returns whether the a page with the given page id is present in the buffer pool.
+* `getPage(self, pageId)` : Read a page from disk, into the buffer pool.
+* `discardPage(self, pageId)` : Removes a page from the page map, returning it to the free page list without flushing the page to the disk.
+* `flushPage(self, pageId)` : Write a page back out to disk.
+* `evictPage(self)` : Evict from the buffer pool using a LRU policy.
+* `clear(self)` : Flush all dirty pages out to disk.
 
 ## Code File
 <dl>
