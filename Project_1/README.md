@@ -11,7 +11,7 @@ This preliminary assignment is intended to get you started on setting up your de
 Using SQL, we implement five English descriptions of queries. The dataset that we will work with comes from the TPC-H benchmark, which models the business logic needed to manage a supply chain warehouse.
 
 #### TPC-H Database Schema
-<img src="./Images/TPC-H_Schema.png" title="Project 1's DB Schema" alt="Should be showing the DB described earlier" width="415" height="400"/>
+<img src="./Images/TPC-H_Schema.PNG" title="Project 1's DB Schema" alt="Should be showing the DB described earlier" width="415" height="400"/>
 
 The TPC-H specification can be found [here](http://www.tpc.org/tpc_documents_current_versions/pdf/tpc-h_v2.17.1.pdf), with an ER diagram of the schema in Section 1.2 (page 13), and table definitions on Section 1.4 (page 14).
 
