@@ -7,7 +7,7 @@ This preliminary assignment is intended to get you started on setting up your de
 * [Part 2](#part2): Python Storage Engine
 
 <a name="part1"></a>
-### SQL Queries
+### Part 1: SQL Queries
 Using SQL, we implement five English descriptions of queries. The dataset that we will work with comes from the TPC-H benchmark, which models the business logic needed to manage a supply chain warehouse.
 
 #### TPC-H Database Schema
@@ -16,13 +16,13 @@ Using SQL, we implement five English descriptions of queries. The dataset that w
 The TPC-H specification can be found [here](http://www.tpc.org/tpc_documents_current_versions/pdf/tpc-h_v2.17.1.pdf), with an ER diagram of the schema in Section 1.2 (page 13), and table definitions on Section 1.4 (page 14).
 
 <a name="part2"></a>
-### Python Storage Engine
+### Part 2: Python Storage Engine
 Using Python we will be implementing a database storage engine. This exercise is intended to get you familiar with serialization techniques in Python to help you read and write database records from a storage file. The storage engine is implemented at `dbsys_hw0/python/warmup.todo.py`
 
 ## Code File
 <dl>
  <dd><pre>
- Handout                    ## Top File
+ Source                     ## Top File
    |-- dbsys_hw1/           ## Source code directory
    |---- sql                ## SQL Warmup materials 
    |------ schema.todo.sql  ## Database schema definition script 
