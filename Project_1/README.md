@@ -22,23 +22,23 @@ Using Python we will be implementing a database storage engine. This exercise is
 ## Code File
  <dl>
  <dt><pre>Handout                    ## Top Level </pre></dt>
- <dd><pre>  |-- dbsys_hw1/           ## Source code directory</pre></dd>
- <dd><pre>  |---- sql                ## SQL Warmup materials </pre></dd>
- <dd><pre>  |------ schema.todo.sql  ## Database schema definition script <pre></dd>
- <dd><pre>  |------ import.sql       ## Data ingestion script  </pre><dd>
- <dd><pre>  |------ q1.todo.sql      ## SQL exercise 1 script  </pre><dd>
- <dd><pre>  |------ q2.todo.sql      ## SQL exercise 2 script  </pre><dd>
- <dd><pre>  |------ q3.todo.sql      ## SQL exercise 3 script  </pre><dd>
- <dd><pre>  |------ q4.todo.sql      ## SQL exercise 4 script  </pre><dd>
- <dd><pre>  |------ q5.todo.sql      ## SQL exercise 5 script  </pre><dd>
- <dd><pre>  | </pre><dd>
- <dd><pre>  |---- python             ## Python warmup materials  </pre><dd>
- <dd><pre>  |------ warmup.py        ## Warmup implementation  </pre><dd>
- <dd><pre>  | </pre><dd>
- <dd><pre>  |-- tests/               ## Test code directory </pre><dd>
- <dd><pre>  |---- publictests.py     ## Test cases </pre><dd>
- <dd><pre>  |---- unit.py            ## Test driver </pre><dd>
- <dd><pre>  |---- common.py          ## Test utilities </pre><dd>
+ <dd><pre>  |-- dbsys_hw1/           ## Source code directory</pre>
+ <dd><pre>  |---- sql                ## SQL Warmup materials </pre>
+ <dd><pre>  |------ schema.todo.sql  ## Database schema definition script <pre>
+ <dd><pre>  |------ import.sql       ## Data ingestion script  </pre></dd>
+ <dd><pre>  |------ q1.todo.sql      ## SQL exercise 1 script  </pre></dd>
+ <dd><pre>  |------ q2.todo.sql      ## SQL exercise 2 script  </pre></dd>
+ <dd><pre>  |------ q3.todo.sql      ## SQL exercise 3 script  </pre></dd>
+ <dd><pre>  |------ q4.todo.sql      ## SQL exercise 4 script  </pre></dd>
+ <dd><pre>  |------ q5.todo.sql      ## SQL exercise 5 script  </pre></dd>
+ <dd><pre>  | </pre></dd>/
+ <dd><pre>  |---- python             ## Python warmup materials  </pre></dd>
+ <dd><pre>  |------ warmup.py        ## Warmup implementation  </pre></dd>
+ <dd><pre>  | </pre></dd>
+ <dd><pre>  |-- tests/               ## Test code directory </pre></dd>
+ <dd><pre>  |---- publictests.py     ## Test cases </pre></dd>
+ <dd><pre>  |---- unit.py            ## Test driver </pre></dd>
+ <dd><pre>  |---- common.py          ## Test utilities </pre></dd>
 > </dl>
 
 ### [Project 1 Source](http://damsl.cs.jhu.edu/teaching/dbsys/2017/assignments/hw0/)
