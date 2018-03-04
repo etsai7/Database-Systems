@@ -9,7 +9,7 @@ import struct
 class FileId:
   """
   A file identifier class, storing an unsigned short representing a file number.
-  
+
   We can use a file identifier to retrieve the full path of a file from
   the database catalog. File identifiers implement pack and unpack methods to
   support their storage on disk.
@@ -20,7 +20,7 @@ class FileId:
   True
   """
 
-  binrepr = struct.Struct("H")
+  binrepr = struct.Struct("H") # represents unsigned short
   size    = binrepr.size
 
   def __init__(self, fileIndex):

@@ -1,5 +1,3 @@
-import io
-
 from Catalog.Schema      import DBSchema
 from Storage.FileManager import FileManager
 from Storage.BufferPool  import BufferPool
@@ -38,9 +36,10 @@ class StorageEngine:
       self.fromOther(other)
 
     else:
-      pageSize = kwargs.get("pageSize", io.DEFAULT_BUFFER_SIZE)
-      self.bufferPool = BufferPool(pageSize=pageSize)
-      self.fileMgr    = FileManager(pageSize=pageSize, bufferPool=self.bufferPool)
+      bpArgs          = {k:v for (k,v) in kwargs.items() if k in ["pageSize", "poolSize"]}
+      fmArgs          = {k:v for (k,v) in kwargs.items() if k in ["pageSize", "dataDir", "indexDir"]}
+      self.bufferPool = BufferPool(**bpArgs)
+      self.fileMgr    = FileManager(bufferPool=self.bufferPool, **fmArgs)
 
       if self.fileMgr:
         self.bufferPool.setFileManager(self.fileMgr)
@@ -48,6 +47,10 @@ class StorageEngine:
   def fromOther(self, other):
     self.bufferPool = other.bufferPool
     self.fileMgr    = other.fileMgr
+
+  def close(self):
+    if self.fileMgr:
+      self.fileMgr.close()
 
   # Data definition operations
 
@@ -71,6 +74,37 @@ class StorageEngine:
     else:
       raise ValueError("Could not remove relation, no file manager found")
 
+  def relationStats(self, relId):
+    if self.fileMgr:
+      (_, rf) = self.fileMgr.relationFile(relId)
+      if rf:
+        return (rf.pageSize(), rf.numPages(), rf.numTuples())
+      else:
+        raise ValueError("Could not find relation " + relId + " in file manager")
+    else:
+      raise ValueError("Could not find relation stats, no file manager found")
+
+  def hasIndex(self, relId, keySchema):
+    if self.fileMgr:
+      return self.fileMgr.hasIndex(relId, keySchema)
+
+  def createIndex(self, relId, relSchema, keySchema, primary):
+    if self.fileMgr:
+      return self.fileMgr.createIndex(relId, relSchema, keySchema, primary)
+
+  def addIndex(self, relId, relSchema, keySchema, primary, indexId, indexDb):
+    if self.fileMgr:
+      self.fileMgr.addIndex(relId, relSchema, keySchema, primary, indexId, indexDb)
+
+  def removeIndex(self, relId, indexId):
+    if self.fileMgr:
+      self.fileMgr.removeIndex(relId, indexId)
+
+  def getIndex(self, indexId):
+    if self.fileMgr:
+      return self.fileMgr.getIndex(indexId)
+
+
   # Data manipulation operations
 
   # Returns a tuple id for the newly inserted data.
@@ -80,15 +114,15 @@ class StorageEngine:
     else:
       raise ValueError("Could not insert tuple, no file manager found")
 
-  def deleteTuple(self, tupleId):
+  def deleteTuple(self, relId, tupleId):
     if self.fileMgr:
-      self.fileMgr.deleteTuple(tupleId)
+      self.fileMgr.deleteTuple(relId, tupleId)
     else:
       raise ValueError("Could not delete tuple, no file manager found")
 
-  def updateTuple(self, tupleId, tupleData):
+  def updateTuple(self, relId, tupleId, tupleData):
     if self.fileMgr:
-      self.fileMgr.updateTuple(tupleId, tupleData)
+      self.fileMgr.updateTuple(relId, tupleId, tupleData)
     else:
       raise ValueError("Could not update tuple, no file manager found")
 

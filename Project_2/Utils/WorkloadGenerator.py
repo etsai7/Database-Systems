@@ -1,7 +1,8 @@
-import io, math, os, os.path, random, time, timeit
+import io, math, os, os.path, random, shutil, time, timeit
 
 from Catalog.Schema        import DBSchema
 from Storage.StorageEngine import StorageEngine
+from Database              import Database
 
 class CSVParser:
   def __init__(self, separator, fieldParsers):
@@ -18,22 +19,26 @@ class WorkloadGenerator:
   A workload generator for random read operations.
 
   >>> wg = WorkloadGenerator()
-  >>> storage = StorageEngine()
+  >>> db = Database()
 
   >>> wg.parseDate('1996-01-01')
   19960101
 
-  >>> wg.createRelations(storage)
-  >>> sorted(list(storage.relations()))
+  >>> wg.createRelations(db)
+  >>> sorted(list(db.relations()))
   ['customer', 'lineitem', 'nation', 'orders', 'part', 'partsupp', 'region', 'supplier']
 
-  >>> wg.loadDataset(storage, 'test/datasets/tpch-tiny', 1.0)
-  >>> [wg.schemas['nation'].unpack(t).N_NATIONKEY for t in storage.tuples('nation')]
+  >>> wg.loadDataset(db, 'test/datasets/tpch-tiny', 1.0)
+  >>> [wg.schemas['nation'].unpack(t).N_NATIONKEY for t in db.storageEngine().tuples('nation')]
   [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
 
-  >>> wg.loadDataset(storage, 'test/datasets/tpch-tiny', 1.0)
-  >>> [wg.schemas['orders'].unpack(t).O_ORDERKEY for t in storage.tuples('orders')] # doctest:+ELLIPSIS
+  >>> wg.loadDataset(db, 'test/datasets/tpch-tiny', 1.0)
+  >>> [wg.schemas['orders'].unpack(t).O_ORDERKEY for t in db.storageEngine().tuples('orders')] # doctest:+ELLIPSIS
   [1, 2, 3, ..., 582]
+
+  >>> db.close()
+  >>> shutil.rmtree(db.fileManager().dataDir, ignore_errors=True)
+  >>> del db
   
   >>> wg.runWorkload('test/datasets/tpch-tiny', 1.0, 4096, 1) # doctest:+ELLIPSIS
   Tuples: 736
@@ -174,18 +179,18 @@ class WorkloadGenerator:
     return CSVParser("|", fieldParsers)
 
   # Create the TPC-H relations in the given storage engine, removing if already present.
-  def createRelations(self, storageEngine):
+  def createRelations(self, db):
     for i in self.schemas:
-      if storageEngine.hasRelation(i):
-        storageEngine.removeRelation(i)
-      storageEngine.createRelation(i, self.schemas[i])
+      if db.hasRelation(i):
+        db.removeRelation(i)
+      db.createRelation(i, self.schemas[i].schema())
 
   # Load the CSV files corresponding to the TPC-H relations into the given storage engine.
   # This method (naively) samples the dataset based on the scale factor.
-  def loadDataset(self, storageEngine, datadir, scaleFactor):
+  def loadDataset(self, db, datadir, scaleFactor):
     self.tupleIds = {}
     for i in self.schemas:
-      if storageEngine.hasRelation(i):
+      if db.hasRelation(i):
         filePath = os.path.join(datadir, i+".csv")
         if os.path.exists(filePath):
           with open(filePath) as f:
@@ -193,20 +198,24 @@ class WorkloadGenerator:
             for line in f:
               if random.random() <= scaleFactor:
                 tup = self.schemas[i].instantiate(*(self.parsers[i].parse(line)))
-                self.tupleIds[i].append(storageEngine.insertTuple(i, self.schemas[i].pack(tup)))
+                tupleId = db.insertTuple(i, self.schemas[i].pack(tup))
+                if tupleId is not None:
+                  self.tupleIds[i].append(tupleId)
+                else:
+                  raise ValueError("Failed to insert tuple")
         else:
           raise ValueError("Could not find file: " + filePath)
       else:
         raise ValueError("Uninitialized relation: "+i)
 
   # Scan through all the stored tuples for the given relations
-  def scanRelations(self, storageEngine, relations):
+  def scanRelations(self, db, relations):
     start = time.time()
     tuplesRead = 0
     
     # Sequentially read through relations
     for rel in relations:
-      for t in storageEngine.tuples(rel):
+      for t in db.storageEngine().tuples(rel):
         tuplesRead += 1
     
     end = time.time()
@@ -216,7 +225,7 @@ class WorkloadGenerator:
 
   # Randomized access for 1/fraction read operations on the 
   # stored tuples for the given relations.
-  def randomizedOperations(self, storageEngine, relations, fraction):
+  def randomizedOperations(self, db, relations, fraction):
 
     # Build a dict of random operations. When encountering the dict key,
     # perform a read operation on the tuple id at the dict value.
@@ -240,7 +249,7 @@ class WorkloadGenerator:
           realTupleId = tupleId
           pId = tupleId.pageId
 
-        page = storageEngine.bufferPool.getPage(pId)
+        page = db.bufferPool().getPage(pId)
         if page.getTuple(realTupleId):
           tuplesRead += 1
 
@@ -250,19 +259,19 @@ class WorkloadGenerator:
     print("Execution time: " + str(end - start))
 
   # Dispatch a workload mode.
-  def runOperations(self, storageEngine, mode):
+  def runOperations(self, db, mode):
     if hasattr(self, 'tupleIds') and self.tupleIds:
       if mode == 1:
-        self.scanRelations(storageEngine, ['lineitem', 'orders'])
+        self.scanRelations(db, ['lineitem', 'orders'])
 
       elif mode == 2:
-        self.randomizedOperations(storageEngine, ['lineitem', 'orders'], 0.2)
+        self.randomizedOperations(db, ['lineitem', 'orders'], 0.2)
 
       elif mode == 3:
-        self.randomizedOperations(storageEngine, ['lineitem', 'orders'], 0.5)
+        self.randomizedOperations(db, ['lineitem', 'orders'], 0.5)
 
       elif mode == 4:
-        self.randomizedOperations(storageEngine, ['lineitem', 'orders'], 0.8)
+        self.randomizedOperations(db, ['lineitem', 'orders'], 0.8)
 
       else:
         raise ValueError("Invalid workload mode (expected 1-4): "+str(mode))
@@ -270,10 +279,13 @@ class WorkloadGenerator:
       raise ValueError("No tuple ids found, has the dataset been loaded?")
 
   def runWorkload(self, datadir, scaleFactor, pageSize, workloadMode):
-    storageEngine = StorageEngine(pageSize=pageSize)
-    self.createRelations(storageEngine)
-    self.loadDataset(storageEngine, datadir, scaleFactor)
-    self.runOperations(storageEngine, workloadMode)
+    db = Database(pageSize=pageSize)
+    self.createRelations(db)
+    self.loadDataset(db, datadir, scaleFactor)
+    self.runOperations(db, workloadMode)
+    db.close()
+    shutil.rmtree(db.fileManager().dataDir, ignore_errors=True)
+    del db
 
 if __name__ == "__main__":
     import doctest

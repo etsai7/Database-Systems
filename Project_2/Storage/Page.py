@@ -105,44 +105,60 @@ class PageHeader:
   True
   """
 
-  # Binary representation of a page header:
-  # page status flag as a char, and tuple size, page capacity
-  # and free space offset as unsigned shorts.
-  binrepr   = struct.Struct("cHHH")
+  binrepr   = struct.Struct("cHHH") # char + 3 unsigned shorts
   size      = binrepr.size
 
   # Flag bitmasks
-  dirtyMask = 0b1
+  dirtyMask     = 0b1
+  directoryPage = 0b11
 
-  # Page header constructor.
-  #
-  # REIMPLEMENT this as desired.
-  #
-  # Constructors keyword arguments, with defaults if not present:
-  # buffer       : a memoryview on a BytesIO's buffer
-  # flags        : a single character byte string indicating the page's status
-  # tupleSize    : the tuple size in bytes
-  # pageCapacity : the page size in bytes
   def __init__(self, **kwargs):
-    buffer               = kwargs.get("buffer", None)
-    self.flags           = kwargs.get("flags", b'\x00')
-    self.tupleSize       = kwargs.get("tupleSize", None)
-    self.pageCapacity    = kwargs.get("pageCapacity", len(buffer))
-    self.freeSpaceOffset = None
-    raise NotImplementedError
+    other = kwargs.get("other", None)
+    if other:
+      self.fromOther(other)
 
-  # Page header equality operation based on header fields.
+    else:
+      # Constructors:
+      # i. buffer, tupleSize, [flags, fso, pagecap]
+      buffer = kwargs.get("buffer", None)
+
+      if not buffer:
+        raise ValueError("No buffer specified for a page header.")
+
+      self.flags           = kwargs.get("flags", b'\x00')
+      self.tupleSize       = kwargs.get("tupleSize", None)
+      self.pageCapacity    = kwargs.get("pageCapacity", len(buffer))
+
+      if not self.tupleSize:
+        raise ValueError("No tuple size specified in a page header.")
+
+      self.postHeaderInitialize(**kwargs)
+
   def __eq__(self, other):
-    return (    self.flags == other.flags
-            and self.tupleSize == other.tupleSize
-            and self.pageCapacity == other.pageCapacity
-            and self.freeSpaceOffset == other.freeSpaceOffset )
+    return (    self.tupleSize == other.tupleSize
+            and self.flags == other.flags
+            and self.freeSpaceOffset == other.freeSpaceOffset
+            and self.pageCapacity == other.pageCapacity )
 
-  def __hash__(self):
-    return hash((self.flags, self.tupleSize, self.pageCapacity, self.freeSpaceOffset))
+  def postHeaderInitialize(self, **kwargs):
+    fresh  = kwargs.get("flags", None) is None
+    buffer = kwargs.get("buffer", None)
+
+    self.freeSpaceOffset = kwargs.get("freeSpaceOffset", self.headerSize())
+    if fresh and buffer:
+      # Push the page header into the buffer.
+      # Any subclasses of the page header must do the same for its metadata.
+      buffer[0:PageHeader.size] = PageHeader.pack(self)
+
+  def fromOther(self, other):
+    if isinstance(other, PageHeader):
+        self.tupleSize       = other.tupleSize
+        self.flags           = other.flags
+        self.freeSpaceOffset = other.freeSpaceOffset
+        self.pageCapacity    = other.pageCapacity
 
   def headerSize(self):
-    raise NotImplementedError
+    return PageHeader.size
 
   # Flag operations.
   def flag(self, mask):
@@ -165,36 +181,110 @@ class PageHeader:
   def numTuples(self):
     return int(self.usedSpace() / self.tupleSize)
 
+  # Tuple index for a given offset
+  def tupleIndex(self, offset):
+    return math.floor((offset - self.dataOffset()) / self.tupleSize)
+
+  # Check that an offset is in a writable data area in the page
+  def validatePageOffset(self, offset):
+    if self.dataOffset() <= offset and offset < self.pageCapacity:
+      return offset
+
+  # Check that an offset is within the written data area
+  def validateDataOffset(self, offset):
+    if self.dataOffset() <= offset and offset <= self.freeSpaceOffset:
+      return offset
+
+  def validTuple(self, tupleData):
+    return len(tupleData) == self.tupleSize
+
+  # Returns the offset in the page where the data begins
+  def dataOffset(self):
+    return self.headerSize()
+
+  # Check that the tuple index is within the current page and return its offset
+  def tupleIndexOffset(self, tupleIndex):
+    if self.tupleSize:
+      return self.validatePageOffset(self.dataOffset() + (self.tupleSize * tupleIndex))
+
+  # Check that a given tuple is within the current page and return its offset
+  def tupleOffset(self, tupleId):
+    if tupleId:
+      return self.tupleIndexOffset(tupleId.tupleIndex)
+
+  # Return the range of offsets within the page occupied by a tuple
+  def tupleRange(self, tupleId):
+    start = self.tupleOffset(tupleId)
+    end   = start + self.tupleSize if start else None
+    if end:
+      return (self.validateDataOffset(start), self.validateDataOffset(end))
+    else:
+      return (None, None)
+
+  # Return the range of offsets that the tuple may occupy
+  def pageRange(self, tupleId):
+    start = self.tupleOffset(tupleId)
+    end   = start + self.tupleSize if start else None
+    if end:
+      return (start, self.validatePageOffset(end))
+    else:
+      return (None, None)
+
   # Returns the space available in the page associated with this header.
   def freeSpace(self):
-    raise NotImplementedError
+    return self.pageCapacity - self.freeSpaceOffset
 
   # Returns the space used in the page associated with this header.
   def usedSpace(self):
-    raise NotImplementedError
+    return self.freeSpaceOffset - self.dataOffset()
 
   # Returns whether the page has any free space for a tuple.
   def hasFreeTuple(self):
-    raise NotImplementedError
+    return self.freeSpaceOffset + self.tupleSize <= self.pageCapacity
 
   # Returns the page offset of the next free tuple.
   # This should also "allocate" the tuple, such that any subsequent call
   # does not yield the same tupleIndex.
   def nextFreeTuple(self):
-    raise NotImplementedError
+    if self.hasFreeTuple():
+      self.freeSpaceOffset += self.tupleSize
+      return self.freeSpaceOffset - self.tupleSize
+    else:
+      return None
 
   # Returns a triple of (tupleIndex, start, end) for the next free tuple.
-  # This should cal nextFreeTuple()
   def nextTupleRange(self):
-    raise NotImplementedError
+    if self.hasFreeTuple():
+      start = self.nextFreeTuple()
+      end   = start + self.tupleSize if start else None
+      index = self.tupleIndex(start) if start else None
+      return (index, start, end)
+    else:
+      return (None, None, None)
 
-  # Returns a binary representation of this page header.
+  # Marks the tuple as being used if it is not already so.
+  # In a contiguous tuple, the caller must ensure all data up to the tuple id is valid.
+  def useTupleIndex(self, tupleIndex):
+    offset = self.tupleIndexOffset(tupleIndex)
+    if offset + self.tupleSize >= self.freeSpaceOffset:
+      self.freeSpaceOffset = offset + self.tupleSize
+
+  def useTuple(self, tupleId):
+    self.useTupleIndex(tupleId.tupleIndex)
+
+  # Marks the tuple as being free.
+  # In a contiguous tuple, all tuples after the given tuple id become free.
+  def resetTupleIndex(self, tupleIndex):
+    self.freeSpaceOffset = self.tupleIndexOffset(tupleIndex)
+
+  def resetTuple(self, tupleId):
+    self.resetTupleIndex(tupleId.tupleIndex)
+
   def pack(self):
     return PageHeader.binrepr.pack(
               self.flags, self.tupleSize,
               self.freeSpaceOffset, self.pageCapacity)
 
-  # Constructs a page header object from a binary representation held in a byte string.
   @classmethod
   def unpack(cls, buffer):
     values = PageHeader.binrepr.unpack_from(buffer)
@@ -321,36 +411,31 @@ class Page(BytesIO):
 
   headerClass = PageHeader
 
-  # Page constructor.
-  #
-  # REIMPLEMENT this as desired.
-  #
-  # Constructors keyword arguments, with defaults if not present:
-  # buffer       : a byte string of initial page contents.
-  # pageId       : a PageId instance identifying this page.
-  # header       : a PageHeader instance.
-  # schema       : the schema for tuples to be stored in the page.
-  # Also, any keyword arguments needed to construct a PageHeader.
   def __init__(self, **kwargs):
-    buffer = kwargs.get("buffer", None)
-    if buffer:
-      BytesIO.__init__(self, buffer)
-      self.pageId = kwargs.get("pageId", None)
-      header      = kwargs.get("header", None)
-      schema      = kwargs.get("schema", None)
-
-      if self.pageId and header:
-        self.header = header
-      elif self.pageId:
-        self.header = self.initializeHeader(**kwargs)
-      else:
-        raise ValueError("No page identifier provided to page constructor.")
-
-      raise NotImplementedError
+    other = kwargs.get("other", None)
+    if other:
+      self.fromOther(other)
 
     else:
-      raise ValueError("No backing buffer provided to page constructor.")
+      buffer = kwargs.get("buffer", None)
+      if buffer:
+        BytesIO.__init__(self, buffer)
+        self.pageId = kwargs.get("pageId", None)
+        header      = kwargs.get("header", None)
 
+        if self.pageId and header:
+          self.header = header
+        elif self.pageId:
+          self.header = self.initializeHeader(**kwargs)
+        else:
+          raise ValueError("No page identifier provided to page constructor.")
+      else:
+        raise ValueError("No backing buffer provided to page constructor.")
+
+  def fromOther(self, other):
+    BytesIO.__init__(self, other.getvalue())
+    self.pageId = copy.deepcopy(other.pageId)
+    self.header = copy.deepcopy(other.header)
 
   # Header constructor. This can be overridden by subclasses.
   def initializeHeader(self, **kwargs):
@@ -360,18 +445,9 @@ class Page(BytesIO):
     else:
       raise ValueError("No schema provided when constructing a page.")
 
-  # Iterator
+  # Tuple iterator
   def __iter__(self):
-    self.iterTupleIdx = 0
-    return self
-
-  def __next__(self):
-    t = self.getTuple(TupleId(self.pageId, self.iterTupleIdx))
-    if t:
-      self.iterTupleIdx += 1
-      return t
-    else:
-      raise StopIteration
+    return PageTupleIterator(self)
 
   # Dirty bit accessors
   def isDirty(self):
@@ -381,40 +457,81 @@ class Page(BytesIO):
     self.header.setDirty(dirty)
 
   # Tuple accessor methods
-
-  # Returns a byte string representing a packed tuple for the given tuple id.
   def getTuple(self, tupleId):
-    raise NotImplementedError
+    if self.header and tupleId:
+      (start, end) = self.header.tupleRange(tupleId)
+      if start and end:
+        return self.getbuffer()[start:end]
 
-  # Updates the (packed) tuple at the given tuple id.
   def putTuple(self, tupleId, tupleData):
-    raise NotImplementedError
+    if self.header and tupleId and tupleData and self.header.validTuple(tupleData):
+      (start, end) = self.header.tupleRange(tupleId)
+      if start and end:
+        self.setDirty(True)
+        self.getbuffer()[start:end] = tupleData
 
-  # Adds a packed tuple to the page. Returns the tuple id of the newly added tuple.
   def insertTuple(self, tupleData):
-    raise NotImplementedError
+    if self.header and tupleData and self.header.validTuple(tupleData):
+      (tupleIndex, start, end) = self.header.nextTupleRange()
+      if start and end:
+        self.setDirty(True)
+        self.getbuffer()[start:end] = tupleData
+        return TupleId(self.pageId, tupleIndex)
 
-  # Zeroes out the contents of the tuple at the given tuple id.
   def clearTuple(self, tupleId):
-    raise NotImplementedError
+    if self.header and tupleId:
+      (start, end) = self.header.tupleRange(tupleId)
+      if start and end:
+        self.setDirty(True)
+        self.getbuffer()[start:end] = b'\x00' * self.header.tupleSize
 
-  # Removes the tuple at the given tuple id, shifting subsequent tuples.
   def deleteTuple(self, tupleId):
-    raise NotImplementedError
+    if self.header and tupleId:
+      (start, end) = self.header.tupleRange(tupleId)
+      if start and end:
+        self.setDirty(True)
+        shiftLen = self.header.freeSpaceOffset - end
+        self.getbuffer()[start:start+shiftLen] = self.getbuffer()[end:end+shiftLen]
+        resetTupleIndex = self.header.tupleIndex(self.header.freeSpaceOffset - self.header.tupleSize)
+        self.header.resetTuple(TupleId(self.pageId, resetTupleIndex))
 
-  # Returns a binary representation of this page.
-  # This should refresh the binary representation of the page header contained
-  # within the page by packing the header in place.
+  def clear(self):
+    if self.header:
+      start = self.header.dataOffset()
+      end   = self.header.pageCapacity
+      if start and end:
+        self.setDirty(True)
+        self.getbuffer()[start:end] = b'\x00' * (end-start)
+
   def pack(self):
-    raise NotImplementedError
+    if self.header:
+      self.getbuffer()[0:self.header.headerSize()] = self.header.pack()
+      return self.getvalue()
 
-  # Creates a Page instance from the binary representation held in the buffer.
-  # The pageId of the newly constructed Page instance is given as an argument.
   @classmethod
   def unpack(cls, pageId, buffer):
-    raise NotImplementedError
+    header = cls.headerClass.unpack(buffer)
+    return cls(pageId=pageId, buffer=buffer, header=header)
 
+class PageTupleIterator:
+  """
+  Explicit tuple iterator class, for ranging over the tuples in a page.
+  This allows multiple callers to simultaneously iterate over the same page.
+  """
+  def __init__(self, page):
+    self.page = page
+    self.iterTupleIdx = 0
 
+  def __iter__(self):
+    return self
+
+  def __next__(self):
+    t = self.page.getTuple(TupleId(self.page.pageId, self.iterTupleIdx))
+    if t:
+      self.iterTupleIdx += 1
+      return t
+    else:
+      raise StopIteration
 
 if __name__ == "__main__":
     import doctest
