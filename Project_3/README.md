@@ -62,6 +62,5 @@ Implemented an external sort operator. This operator should process the input in
  </pre></dd> 
 </dl>
 
-### [Project 3 Source](http://damsl.cs.jhu.edu/teaching/dbsys/2017/assignments/hw2/
-)
+### [Project 3 Source](http://damsl.cs.jhu.edu/teaching/dbsys/2017/assignments/hw2/)
 
